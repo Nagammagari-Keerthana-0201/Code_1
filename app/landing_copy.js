@@ -33,7 +33,7 @@ const SvgMic = ({ size = 28, color = "#00f2ff" }) => (
     </View>
 );
 
-const API_BASE_URL = 'https://dannielle-zonal-defiantly.ngrok-free.dev';
+const API_BASE_URL = 'https://ripely-unmacerated-ishaan.ngrok-free.dev';
 const VAD_THRESHOLD = -40;
 const SILENCE_DURATION = 1200;
 
@@ -216,7 +216,7 @@ export default function LandingPage() {
 
             // Step 1: Call welcome API
             console.log('Calling welcome API...');
-            const welcomeResponse = await fetch(`${API_BASE_URL}/api/collect/voice-welcome`, {
+            const welcomeResponse = await fetch(`https://ripely-unmacerated-ishaan.ngrok-free.dev/api/collect/voice-welcome`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -398,7 +398,7 @@ export default function LandingPage() {
             });
             formData.append('lang', normalizedLang);
 
-            const translateResponse = await fetch(`${API_BASE_URL}/api/transulate/translate`, {
+            const translateResponse = await fetch(`https://ripely-unmacerated-ishaan.ngrok-free.dev/api/transulate/translate`, {
                 method: 'POST',
                 body: formData,
             });
@@ -430,7 +430,7 @@ export default function LandingPage() {
             // Step 2: Send to voice API
             console.log('Calling voice API...');
 
-            const voiceResponse = await fetch(`${API_BASE_URL}/api/collect/voice`, {
+            const voiceResponse = await fetch(`https://ripely-unmacerated-ishaan.ngrok-free.dev/api/collect/voice`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -482,10 +482,10 @@ export default function LandingPage() {
     };
 
     return (
-       <LinearGradient
+        <LinearGradient
             colors={['#020617', '#071a2f', '#001a33']}
             style={{ flex: 1 }}
-            >
+        >
             <WaterBackground />
             <View style={styles.header}>
                 <Text style={styles.headerTitle}>Health Care Assistant</Text>

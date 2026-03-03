@@ -3,11 +3,12 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Stack, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View, RefreshControl, Modal, TextInput, Alert, KeyboardAvoidingView, Platform } from "react-native";
+import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View, RefreshControl, Modal, TextInput, Alert, KeyboardAvoidingView, Platform, Pressable } from "react-native";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { styles } from "../styles/doctordashboard.styles";
+import { Config } from "../constants/Config";
 
-const API_BASE_URL = 'https://handsome-nena-mignon.ngrok-free.dev';
+const API_BASE_URL = Config.API_BASE_URL;
 
 export default function DoctorDashboard() {
     const router = useRouter();
@@ -138,10 +139,10 @@ export default function DoctorDashboard() {
             <StatusBar style="light" />
 
             <View style={styles.header}>
-                <View>
+                <Pressable onPress={() => router.push("/update-profile")}>
                     <Text style={styles.greeting}>Good Morning,</Text>
                     <Text style={styles.doctorName}>{doctorName}</Text>
-                </View>
+                </Pressable>
                 <TouchableOpacity style={styles.profileButton} onPress={() => router.replace("/doctor-login")}>
                     <Ionicons name="log-out-outline" size={24} color="#f87171" />
                 </TouchableOpacity>

@@ -16,8 +16,9 @@ import Animated, {
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { styles } from "../styles/doctor.styles";
+import { Config } from "../constants/Config";
 
-const API_BASE_URL = 'https://handsome-nena-mignon.ngrok-free.dev';
+const API_BASE_URL = Config.API_BASE_URL;
 
 export default function DoctorLogin() {
   const router = useRouter();
@@ -91,6 +92,7 @@ export default function DoctorLogin() {
       if (response.ok) {
         // Save doctor data for the dashboard
         await AsyncStorage.setItem('doctor_id', data.doctor_id);
+        await AsyncStorage.setItem('doctor_email', loginEmail);
         await AsyncStorage.setItem('doctor_name', data.name);
         await AsyncStorage.setItem('doctor_specialization', data.specialization);
 

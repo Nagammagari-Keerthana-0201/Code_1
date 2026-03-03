@@ -7,6 +7,7 @@ import { Alert, Pressable, ScrollView, Text, TextInput, View } from 'react-nativ
 import Svg, { Path } from 'react-native-svg';
 import WaterBackground from '../components/WaterBackground';
 import { styles } from '../styles/landing.styles';
+import { Config } from '../constants/Config';
 
 import { useRouter } from 'expo-router';
 
@@ -89,12 +90,12 @@ const SvgDoctor = ({ size = 28, color = "#94a3b8" }) => (
             d="M22 44v6M42 44v6"
             stroke={color}
             strokeWidth="2.5"
-            strokeLinecap="round"
         />
     </Svg>
 );
 
-const API_BASE_URL = 'https://handsome-nena-mignon.ngrok-free.dev';
+// Update the backend URL in constants/Config.js
+const API_BASE_URL = Config.API_BASE_URL;
 const VAD_THRESHOLD = -30;
 const SILENCE_DURATION = 1200;
 
@@ -137,7 +138,7 @@ export default function LandingPage() {
             return;
         }
 
-        const wsUrl = `ws://handsome-nena-mignon.ngrok-free.dev/ws/audio`;
+        const wsUrl = `${API_BASE_URL.replace('https://', 'wss://').replace('http://', 'ws://')}/ws/audio`;
         console.log('Connecting to WebSocket:', wsUrl);
 
         try {
@@ -205,13 +206,11 @@ export default function LandingPage() {
                             }),
                         });
 
+                        if (!voiceResponse.ok) {
+                            const errorText = await voiceResponse.text();
+                            throw new Error(`Server returned ${voiceResponse.status}: ${errorText.substring(0, 100)}`);
+                        }
                         const voiceData = await voiceResponse.json();
-
-                        // Normalize response format:
-                        // 1. { ask: { advice_text, audio_base64 } } -> Intermediate
-                        // 2. { response: { advice_text, audio_base64 }, hospitals } -> Final (Medium/High)
-                        // 3. { advice_text, audio_base64 } -> Final (Low Severity)
-
                         const askObj = voiceData?.ask || voiceData?.response || voiceData;
                         const botResponse = askObj?.advice_text || voiceData?.text || "";
                         const audioBase64 = askObj?.audio_base64 || null;
@@ -381,7 +380,10 @@ export default function LandingPage() {
             });
 
             const textResponse = await welcomeResponse.text();
-            console.log('Welcome API response status:', welcomeResponse.status);
+            if (!welcomeResponse.ok) {
+                const errorText = await welcomeResponse.text();
+                throw new Error(`Server returned ${welcomeResponse.status}: ${errorText.substring(0, 100)}`);
+            }
             let welcomeData;
             try {
                 welcomeData = JSON.parse(textResponse);
@@ -600,17 +602,20 @@ export default function LandingPage() {
 
         try {
             let finalText = text;
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 40000); // Increased to 40s for slow ngrok
+            const startTime = Date.now();
 
             // 1. Translate if not English
             if (!isEnglish) {
-                console.log(`Translating from ${normalizedLang} to en...`);
-                // Use the text-translate endpoint
+                console.log(`--- Translating from ${normalizedLang} to en ---`);
                 const transResponse = await fetch(`${API_BASE_URL}/api/transulate/text-translate`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'ngrok-skip-browser-warning': 'true'
                     },
+                    signal: controller.signal,
                     body: JSON.stringify({
                         text: text,
                         source_lang: normalizedLang,
@@ -621,27 +626,33 @@ export default function LandingPage() {
                 const transData = await transResponse.json();
                 if (transData.translation) {
                     finalText = transData.translation;
-                    console.log('Translated text:', finalText);
-                } else {
-                    console.warn('Translation failed, using original text');
                 }
             }
 
-            // 2. Send to Voice API (with translated text)
+            // 2. Send to Voice API
+            console.log(`--- Hitting Backend: ${API_BASE_URL}/api/collect/voice ---`);
             const voiceResponse = await fetch(`${API_BASE_URL}/api/collect/voice`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'ngrok-skip-browser-warning': 'true'
                 },
+                signal: controller.signal,
                 body: JSON.stringify({
                     session_id: sessionIdRef.current,
                     user_input: finalText,
                     lang: normalizedLang,
                 }),
             });
+            clearTimeout(timeoutId);
 
+            console.log('--- Voice API Status ---', voiceResponse.status);
+            if (!voiceResponse.ok) {
+                const errorText = await voiceResponse.text();
+                throw new Error(`Server returned ${voiceResponse.status}: ${errorText.substring(0, 100)}`);
+            }
             const voiceData = await voiceResponse.json();
+            if (!voiceData) throw new Error("Null response from server");
 
             const askObj = voiceData?.ask || voiceData?.response || voiceData;
             const botResponse = askObj?.advice_text || voiceData?.text || "";
@@ -657,7 +668,9 @@ export default function LandingPage() {
             }
         } catch (error) {
             console.error('Manual text processing failed:', error);
-            Alert.alert('Error', 'Failed to process text.');
+            const errorMsg = error.name === 'AbortError' ? 'Backend timed out. Please try again.' : 'Failed to process text.';
+            Alert.alert('Connection Error', errorMsg);
+            addMessage({ sender: 'system', text: `Error: ${errorMsg}` });
         } finally {
             setIsProcessing(false);
         }
